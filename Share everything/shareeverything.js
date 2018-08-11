@@ -89,6 +89,7 @@
 	}
 	
 	chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
+		debugger;
 		try {	
 			switch(request) {
 				case "ShareImage":
@@ -105,24 +106,19 @@
 					break;
 				case "SharePage":
 					currentUrl = document.location.href;
+					break;
 				default:
 					return;
 			}	
 			if(invalidURL(currentUrl)){
 				if(confirm("The object you are trying to share has an invalid URL format.\nWould you like to share the page instead?")){
 					currentUrl = document.location.href;
-				}else{
-					hideModal();
-					return;
 				}
 			}		
 		}
 		catch(err) {
 			if(confirm("The following error has occured: " + err.message + "\nWould you like to share the page instead?")){
 				currentUrl = document.location.href;
-			}else{
-				hideModal();
-				return;
 			}
 		}
 		shareDescription = encodeURIComponent(document.title);
