@@ -37,7 +37,7 @@
 					<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\"><path d=\"M22 4H2C.9 4 0 4.9 0 6v12c0 1.1.9 2 2 2h20c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zM7.25 14.43l-3.5 2c-.08.05-.17.07-.25.07-.17 0-.34-.1-.43-.25-.14-.24-.06-.55.18-.68l3.5-2c.24-.14.55-.06.68.18.14.24.06.55-.18.68zm4.75.07c-.1 0-.2-.03-.27-.08l-8.5-5.5c-.23-.15-.3-.46-.15-.7.15-.22.46-.3.7-.14L12 13.4l8.23-5.32c.23-.15.54-.08.7.15.14.23.07.54-.16.7l-8.5 5.5c-.08.04-.17.07-.27.07zm8.93 1.75c-.1.16-.26.25-.43.25-.08 0-.17-.02-.25-.07l-3.5-2c-.24-.13-.32-.44-.18-.68s.44-.32.68-.18l3.5 2c.24.13.32.44.18.68z\"/></svg></div> E-Mail</div>\
 				</a>\
 				<!-- Sharingbutton Pinterest -->\
-				<a class=\"resp-sharing-button__link\" href=\"https://pinterest.com/pin/create/button/?url=" + currentUrl + "&media=" + currentUrl + "&description=" + shareDescription + "\" target=\"_blank\" aria-label=\" Pinterest\">\
+				<a class=\"resp-sharing-button__link\" href=\"https://pinterest.com/pin/create/button/?url=" + currentUrl + "&description=" + shareDescription + "\" target=\"_blank\" aria-label=\" Pinterest\">\
 				  <div class=\"resp-sharing-button resp-sharing-button--pinterest resp-sharing-button--large\"><div aria-hidden=\"true\" class=\"resp-sharing-button__icon resp-sharing-button__icon--solid\">\
 					<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\"><path d=\"M12.14.5C5.86.5 2.7 5 2.7 8.75c0 2.27.86 4.3 2.7 5.05.3.12.57 0 .66-.33l.27-1.06c.1-.32.06-.44-.2-.73-.52-.62-.86-1.44-.86-2.6 0-3.33 2.5-6.32 6.5-6.32 3.55 0 5.5 2.17 5.5 5.07 0 3.8-1.7 7.02-4.2 7.02-1.37 0-2.4-1.14-2.07-2.54.4-1.68 1.16-3.48 1.16-4.7 0-1.07-.58-1.98-1.78-1.98-1.4 0-2.55 1.47-2.55 3.42 0 1.25.43 2.1.43 2.1l-1.7 7.2c-.5 2.13-.08 4.75-.04 5 .02.17.22.2.3.1.14-.18 1.82-2.26 2.4-4.33.16-.58.93-3.63.93-3.63.45.88 1.8 1.65 3.22 1.65 4.25 0 7.13-3.87 7.13-9.05C20.5 4.15 17.18.5 12.14.5z\"/></svg>\
 					</div>Pinterest</div>\
@@ -69,8 +69,27 @@
 		clickedEl = event.button == 2 ? event.target : null;
 	}, true);
 
+	function invalidURL(str) {
+		//Validation based on: https://github.com/segmentio/is-url
+		if (typeof str !== "string") {
+			return true;
+		}
+		let protocolAndDomainRE = /^(?:\w+:)?\/\/(\S+)$/;
+		let localhostDomainRE = /^localhost[\:?\d]*(?:[^\:?\d]\S*)?$/
+		let nonLocalhostDomainRE = /^[^\s\.]+\.\S{2,}$/;
+		let match = str.match(protocolAndDomainRE);
+		if (!match || !match[1]) {
+			return true;
+		}
+		if (localhostDomainRE.test(match[1]) ||
+			nonLocalhostDomainRE.test(match[1])) {
+			return false;
+		}
+		return true;
+	}
+	
 	chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
-		try {		
+		try {	
 			switch(request) {
 				case "ShareImage":
 				case "ShareVideo":
@@ -86,21 +105,34 @@
 					break;
 				case "SharePage":
 					currentUrl = document.location.href;
-					break;
 				default:
 					return;
 			}	
-			stylesModal.innerHTML = getModalHTML();
-			stylesModal.getElementsByClassName("shareEverythingModal-close")[0].addEventListener("click", hideModal);
-			let respButtons = stylesModal.getElementsByClassName("resp-sharing-button__link");
-			for(let i = 0; i < respButtons.length; i++){
-				respButtons[i].addEventListener("click", hideModal);
-			}			
-			showModal();
+			if(invalidURL(currentUrl)){
+				if(confirm("The object you are trying to share has an invalid URL format.\nWould you like to share the page instead?")){
+					currentUrl = document.location.href;
+				}else{
+					hideModal();
+					return;
+				}
+			}		
 		}
 		catch(err) {
-			alert("Something hasn't gone to plan\nThis usually happens when the link you are trying to share uses Javascript\nYou may find the \"Share Page\" function is more successful\n\nTechnical details: " + err.message);
+			if(confirm("The following error has occured: " + err.message + "\nWould you like to share the page instead?")){
+				currentUrl = document.location.href;
+			}else{
+				hideModal();
+				return;
+			}
+		}
+		shareDescription = encodeURIComponent(document.title);
+		stylesModal.innerHTML = getModalHTML();
+		stylesModal.getElementsByClassName("shareEverythingModal-close")[0].addEventListener("click", hideModal);
+		let respButtons = stylesModal.getElementsByClassName("resp-sharing-button__link");
+		for(let i = 0; i < respButtons.length; i++){
+			respButtons[i].addEventListener("click", hideModal);
 		}			
+		showModal();
 	});	
 		
 })();
