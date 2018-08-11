@@ -89,7 +89,7 @@
 	}
 	
 	chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
-		debugger;
+		let needModal = true;
 		try {	
 			switch(request) {
 				case "ShareImage":
@@ -113,22 +113,28 @@
 			if(invalidURL(currentUrl)){
 				if(confirm("The object you are trying to share has an invalid URL format.\nWould you like to share the page instead?")){
 					currentUrl = document.location.href;
+				}else{
+					needModal = false;
 				}
 			}		
 		}
 		catch(err) {
 			if(confirm("The following error has occured: " + err.message + "\nWould you like to share the page instead?")){
 				currentUrl = document.location.href;
+			}else{
+					needModal = false;
 			}
 		}
-		shareDescription = encodeURIComponent(document.title);
-		stylesModal.innerHTML = getModalHTML();
-		stylesModal.getElementsByClassName("shareEverythingModal-close")[0].addEventListener("click", hideModal);
-		let respButtons = stylesModal.getElementsByClassName("resp-sharing-button__link");
-		for(let i = 0; i < respButtons.length; i++){
-			respButtons[i].addEventListener("click", hideModal);
-		}			
-		showModal();
+		if(needModal){
+			shareDescription = encodeURIComponent(document.title);
+			stylesModal.innerHTML = getModalHTML();
+			stylesModal.getElementsByClassName("shareEverythingModal-close")[0].addEventListener("click", hideModal);
+			let respButtons = stylesModal.getElementsByClassName("resp-sharing-button__link");
+			for(let i = 0; i < respButtons.length; i++){
+				respButtons[i].addEventListener("click", hideModal);
+			}			
+			showModal();
+		}
 	});	
 		
 })();
